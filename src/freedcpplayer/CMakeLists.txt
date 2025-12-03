@@ -11,11 +11,12 @@ set(CMAKE_CUDA_EXTENSIONS OFF)
 
 find_package(SDL2 REQUIRED)
 
-# libsdl2-ttf-dev libsdl2-ttf-2.0-0
-find_package(SDL_ttf REQUIRED)
+# Prefer pkg-config for SDL2_ttf on Debian/Ubuntu
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
 
 # libwxgtk3.0-gtk3-dev
-find_package(wxWidgets REQUIRED gl core base COMPONENTS net)
+find_package(wxWidgets REQUIRED COMPONENTS gl core base net)
 
 include(${wxWidgets_USE_FILE})
 
@@ -33,7 +34,7 @@ include_directories(
   ${NVJPEG2K_PATH}/include
   SYSTEM ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
   ${SDL2_INCLUDE_DIRS}
-  ${SDL_TTF_INCLUDE_DIRS}
+  ${SDL2_TTF_INCLUDE_DIRS}
   ${wxWidgets_INCLUDE_DIRS}
 )
 
@@ -53,6 +54,23 @@ if(UNIX)
 endif()
 
 # https://github.com/cinecert/asdcplib
+# Try to locate asdcplib headers and libraries (asdcp, kumu)
+find_path(ASDCP_INCLUDE_DIR
+  NAMES AS_DCP.h
+  PATH_SUFFIXES asdcplib src
+  PATHS /usr/local/include /usr/include
+)
+find_library(ASDCP_LIBRARY NAMES asdcp PATHS /usr/local/lib /usr/local/lib64 /usr/lib /usr/lib64)
+find_library(KUMU_LIBRARY  NAMES kumu  PATHS /usr/local/lib /usr/local/lib64 /usr/lib /usr/lib64)
+
+if(NOT ASDCP_INCLUDE_DIR OR NOT ASDCP_LIBRARY OR NOT KUMU_LIBRARY)
+  message(STATUS "asdcplib not found: headers at ${ASDCP_INCLUDE_DIR}, libs asdcp=${ASDCP_LIBRARY}, kumu=${KUMU_LIBRARY}")
+  message(STATUS "Install asdcplib (kumu, asdcp) and set include/lib paths if needed.")
+endif()
+
+if(ASDCP_INCLUDE_DIR)
+  include_directories(${ASDCP_INCLUDE_DIR})
+endif()
 
 target_link_libraries(freedcpplayer
   ${wxWidgets_LIBRARIES}
@@ -61,9 +79,9 @@ target_link_libraries(freedcpplayer
   ssl
   pthread
   SDL2
-  SDL2_ttf
-  kumu
-  asdcp
+  ${SDL2_TTF_LIBRARIES}
+  ${KUMU_LIBRARY}
+  ${ASDCP_LIBRARY}
   ${NVJPEG2K_LIB} CUDA::cudart ${FILESYS}
   )
 
