@@ -3,7 +3,7 @@
 > **Next-Gen Cinema Playback System powered by NVIDIA GPUs.**
 > *An experimental project exploring the limits of software-based DCP playback.*
 
-![SMS Console Screenshot](screenshot.jpeg?v=2)
+![SMS Console Screenshot](screenshot.jpeg)
 
 ## ⚡️ What is this?
 
