@@ -2,6 +2,8 @@
 
 一个基于 **GPU 加速技术**的现代化数字电影放映管理系统，支持 DCP（Digital Cinema Package）播放控制。
 
+![SMS Console Screenshot](screenshot.jpeg)
+
 ## 核心技术亮点
 
 ### 🚀 GPU 加速解码
