@@ -1,167 +1,124 @@
-# Free Dcp Player
+# SMS - Screen Management System
 
-## Intro
+一个用于数字电影放映的管理系统，支持DCP（Digital Cinema Package）播放控制。
 
-Free Dcp Player Nvidia GPU based for independent filmmakers
+## 功能特性
 
-Version 0.6.2 
-support multichannel audio (i.e. 7.1, with 5.1 or stereo downsampling)
-support non zero entrypoint
-Note that the progress bar show the position in the current reel or mxf, not the position in the full movie. To be modified later.
+- 🎬 DCP播放控制（播放、暂停、停止、继续）
+- 📋 播放列表管理
+- 🎛️ 硬件控制模拟（放映机、音频处理器）
+- 🌐 国际化支持（中文/英文）
+- 📁 本地DCP文件夹选择
+- 🔊 音频设备选择
+- 🖥️ 显示设备选择
+- 📊 实时播放进度显示
 
-Support 4K DCP !!
+## 系统架构
 
-FreeDcpPlayer is a “Digital Cinema Package”  player ,  a project mainly based on
-- Nvidia jpeg2000 GPU decoder (Pascal and more recent architecture only i.e. from series 10, such as GTX 1060) - https://developer.nvidia.com/blog/accelerating-jpeg-2000-decoding-for-digital-pathology-and-satellite-images-using-the-nvjpeg2000-library/
-- Asdcplib (https://github.com/cinecert/asdcplib)
-- SDL2 (https://www.libsdl.org/download-2.0.php)
-- SDL_TTF (https://github.com/libsdl-org/SDL_ttf)
-- Wxwidgets (https://www.wxwidgets.org/downloads/)
+### 后端 (SMS Agent)
+- FastAPI 服务器
+- 端口：8088
+- 功能：DCP播放器进程管理、IPC通信、硬件控制API
 
-Some part of the code is partially inspired from VLC DCP project from Nicolas Bertrand.
+### 前端 (SMS Frontend)
+- React + Vite
+- 端口：5173
+- 功能：现代化的控制台界面，实时状态更新
 
-The current version of FreeDcpPlayer,  is in a beta state, for testing purpose only, limited to simple DCP :
-SMPTE or Interop, 2k and 4k (version 0.6.2), with stereo, 5.1 or 7.1 soundtrack, and optionally subtitles, not encrypted.
+## 安装依赖
 
-The wxWidgets based interface allows to launch the main program which is Windows and Ubuntu compatible.
-
-## Keyboard shortcuts
-
- - Stop = Esc
- - Play = space bar
- - Fast rewind or play = left right arrow keys
- - Frame by frame = up and down arrows during stop
- - toggle progress bar = i
- - Press "j" to enable or disable current fps information (from the image processing time).
- - User can also double-click on the picture  : the horizontal position of the click give the start position of the lecture.
-
-## How to use
-
- - Choose the DCP (folder containing ASSETMAP.xml or ASSETMAP file)
- - Choose audio and display device
- - Choose 5.1 output if available.
- - Clic on "Run FreeDcpPlayer"
- - Press space bar to start playing
-
-This version has been tested sucessfully with a Geforce 1060, 1070, 2080, 3050, Quadro M2000 under Windows 10 , Windows 11, and Ubuntu 20.04. 
-
-## Ubuntu installation
-
-### Install AS-DCP Lib
-
-```
-git clone https://github.com/cinecert/asdcplib
-cd asdcplib
-cmake .
-make
-sudo make install
+### 后端依赖
+```bash
+cd sms_agent
+pip install fastapi uvicorn pydantic
 ```
 
-### Add the nvidia jpeg2000 Ubuntu repository
-
-Follow the instructions on the nvidia page:
-
-https://developer.nvidia.com/nvjpeg
-
-Choose the .deb option. This will add the nvjpeg repository to your system.
-
-### Install the required Ubuntu packages
-
-```
-sudo apt install libsdl2-dev libsdl2-ttf-dev libsdl2-ttf-2.0-0 libwxgtk3.0-gtk3-dev libnvjpeg-dev-12-0
+### 前端依赖
+```bash
+cd sms_frontend
+npm install
 ```
 
-### Compilation and installation
+## 运行系统
 
-```
-cd src/freedcpplayer
-cmake .
-make
-sudo make install
-```
-
-### How to run
-
-Just type in:
-
-```
-freedcpplayer
+### 启动后端
+```bash
+cd sms_agent
+python agent.py
 ```
 
-## Troubeshooting & Tips
+### 启动前端
+```bash
+cd sms_frontend
+npm run dev
+```
 
-Note that if you change the hardware (adding/removing a screen or audio interface), it is necessary to close FreeDcpPlayer, delete the config.txt file, then restart FreeDcpPlayer
+访问 `http://localhost:5173` 使用系统。
 
-The program won't work on Maxwell architecture or older (GTX 9xx series)
+## DCP播放器
 
-If you disable "Full resolution" , the images are displayed without any scaling (i.e. one screen pixel = one image pixel).
-Real time 4k (or even 2K) decoding/rendering can be slow. You can "Enable Half resolution decoding" in order to accelerate.
+系统需要配合DCP播放器使用。播放器应该：
+- 支持 `--headless` 模式
+- 接受命令行参数：`-a` (音频设备) 和 `-d` (显示设备)
+- 通过Unix socket提供IPC接口（`/tmp/dcpplayer.sock`）
+- 支持命令：STOP, PAUSE, RESUME, PROGRESS
 
-The program will generate a freedcpplayer.log file if the box “Log” is checked.
+播放器二进制文件路径：`src/dcpplayer/build/dcpplayer`
 
-You can test the player with the trailer of my short film "Croquis d'audience". 
-This DCP Format is DCI scope, in french, with english subtitle.
-It has been encoded using Da Vinci Resolve, and Subtitle are added using Dcp-o-matic.
+## 配置
 
-https://drive.google.com/file/d/1o6mZ97XvE4VkKvm5fVJQQruFNIWV9dA0/view?usp=sharing
+在 `sms_agent/agent.py` 中可以配置：
+- `IPC_SOCKET_PATH`: IPC socket路径
+- `PLAYER_BIN`: DCP播放器二进制文件路径
 
-Tutorial on Youtube
-https://www.youtube.com/watch?v=Cni9rMPJAGU
+## API接口
 
-Another link for testing DCP
-https://dpel.aswf.io/asc-stem2/
+### 播放控制
+- `POST /play` - 播放DCP
+- `POST /stop` - 停止播放
+- `POST /pause` - 暂停播放
+- `POST /resume` - 继续播放
 
+### 播放列表
+- `POST /playlist/start` - 开始播放列表
 
-This program is not intended to replace professional software but can help independent filmmakers 
-to check their DCP on their PC after generating their own DCP with Da Vinci Resolve or Dcp-o-matic.
+### 状态查询
+- `GET /status` - 获取系统状态
 
-For beta tester : in case of problem, you can send me the file freedcpplayer.log to the email adresse  : karleener at orange.fr
+### 硬件控制
+- `POST /hardware` - 控制硬件设备
 
-# License (GPL)
+## 开发
 
-If not specified otherwise (see individual files):
+### 前端开发
+```bash
+cd sms_frontend
+npm run dev
+```
 
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation; either version 3.0 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+### 构建前端
+```bash
+cd sms_frontend
+npm run build
+```
 
+## 技术栈
 
-# Changelog
-Minor modifications 28/03/2025 - version 0.6.3
-Improve sound downmix 5.1 to 2.0 
-add of a volume slider (-6dB to 6dB) in main dialog box
+### 后端
+- Python 3.x
+- FastAPI
+- Uvicorn
+- Pydantic
 
+### 前端
+- React 19
+- Vite
+- react-i18next (国际化)
 
-Minor modifications 03/11/2022 - version 0.6.1
-- small speed improvement, allowing full resolution 4K (at least for DCI Scope) decoding and screening
-- add command line support. 
-For example 
-	freedcpplayer "c:\mydcpdir\Myshortfilm_SHR-1-25_S_Fr-EN_FR-NR_51_2K_karleener_20171009_SMPTE_OV" -a 3 -d 1 -i -j -l 6
-	Note, in order to avoid negative value in command line :
-			-l 6 option encode 0dB audio gain.
-			-l 0 encode -6dB gain and
-			-6 12 encode 6dB gain
-  
-type freedcpplayer -h for help. If you run freedcpplayer without option, the GUI will be used.
-The command option allows screening DCPs in a batch file, optionnally scheduled by the OS.
+## 许可证
 
-Major modifications 15/10/22 - version 0.6.0
-- Add 4k decoding thanks to the 0.6.0 version of nvjpeg2000 by Nvidia
-- Half resolution decoding option (full resolution by default)
-- direct play without pause
+本项目基于原有DCP播放器项目开发，保留原项目的GPL许可证。
 
-Minor modifications 22/03/22 - version 0.4.3
-- added fast navigation with page up and page down keys (10% of reel duration)
-- navigation with left and right keys are now 5% of reel duration
-- disable the possibility to quit the interface while player is running: user have to end the player first using 'esc'.
-- added openjpeg licence which is used by Nvidia nvjpeg2000 library
+## 贡献
+
+欢迎提交Issue和Pull Request。
