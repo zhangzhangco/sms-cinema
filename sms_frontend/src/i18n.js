@@ -32,7 +32,7 @@ const resources = {
             "resume": "RESUME",
             "stop": "STOP",
             "manualDcpLoad": "MANUAL DCP LOAD",
-            "browseDcp": "BROWSE",
+            "browseDcp": "SELECT DCP DIR",
             "audioDevice": "Audio Device",
             "displayDevice": "Display Device",
 
@@ -102,7 +102,7 @@ const resources = {
             "resume": "继续",
             "stop": "停止",
             "manualDcpLoad": "手动加载 DCP",
-            "browseDcp": "浏览",
+            "browseDcp": "选择 DCP 目录",
             "audioDevice": "音频设备",
             "displayDevice": "显示设备",
 
