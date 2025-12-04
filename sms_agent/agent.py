@@ -2,11 +2,14 @@ import socket
 import os
 import subprocess
 import time
+import random
+import threading
+import psutil
+import shutil
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
-import threading
 
 # Configuration
 IPC_SOCKET_PATH = "/tmp/dcpplayer.sock"
@@ -34,19 +37,20 @@ class PlaylistRequest(BaseModel):
 
 class SMSAgent:
     def __init__(self):
-        self.player_process = None
-        self.current_dcp = None
-        self.status = "IDLE"
-        self.playlist = []
-        self.playlist_index = 0
-        self.playlist_active = False
-        self.worker_thread = threading.Thread(target=self._playlist_worker, daemon=True)
-        self.worker_thread.start()
+        # ... (existing init code)
         
         # Simulated Hardware State
         self.hardware = {
             "projector": {"lamp": False, "douser": False},
             "sound": {"level": 7.0, "mute": False}
+        }
+        
+        # System Stats
+        self.system_stats = {
+            "cpu": 12,
+            "gpu": 45,
+            "disk": 78,
+            "temp": 42
         }
 
     def _playlist_worker(self):
@@ -182,7 +186,52 @@ class SMSAgent:
                 pass
         return {"current": 0, "total": 0}
 
+    def _update_system_stats(self):
+        # 1. CPU: Real
+        try:
+            self.system_stats["cpu"] = int(psutil.cpu_percent(interval=None))
+        except:
+            pass
+
+        # 2. Disk: Real
+        try:
+            self.system_stats["disk"] = int(psutil.disk_usage('/').percent)
+        except:
+            pass
+
+        # 3. GPU: Try nvidia-smi, else Simulate
+        gpu_read = False
+        if shutil.which("nvidia-smi"):
+            try:
+                # Run nvidia-smi to get GPU utilization
+                result = subprocess.run(
+                    ["nvidia-smi", "--query-gpu=utilization.gpu,temperature.gpu", "--format=csv,noheader,nounits"],
+                    capture_output=True, text=True
+                )
+                if result.returncode == 0:
+                    output = result.stdout.strip().split(',')
+                    if len(output) >= 2:
+                        self.system_stats["gpu"] = int(output[0])
+                        self.system_stats["temp"] = int(output[1])
+                        gpu_read = True
+            except:
+                pass
+        
+        if not gpu_read:
+            # Fallback: Simulate GPU and Temp based on playback status
+            target_gpu = 80 if self.status == "PLAYING" else 5
+            gpu_diff = target_gpu - self.system_stats["gpu"]
+            # Smooth transition
+            self.system_stats["gpu"] += int(gpu_diff * 0.2) + random.randint(-2, 2)
+            self.system_stats["gpu"] = max(0, min(100, self.system_stats["gpu"]))
+
+            # Temp follows GPU
+            target_temp = 40 + (self.system_stats["gpu"] * 0.3)
+            temp_diff = target_temp - self.system_stats["temp"]
+            self.system_stats["temp"] += int(temp_diff * 0.1) + random.randint(-1, 1)
+
     def get_status(self):
+        self._update_system_stats()
         progress = self.get_progress()
         return {
             "status": self.status,
@@ -191,7 +240,8 @@ class SMSAgent:
             "playlist_index": self.playlist_index,
             "playlist_total": len(self.playlist),
             "progress": progress,
-            "hardware": self.hardware
+            "hardware": self.hardware,
+            "system": self.system_stats
         }
 
 agent = SMSAgent()
@@ -209,14 +259,20 @@ def play_dcp(req: PlayRequest):
         print("Player already running, stopping it first...")
         agent.stop_player()
 
-    if agent.start_player(req.dcp_path, req.audio_dev, req.display_dev):
+    # Expand user path (e.g. ~ -> /Users/zhangxin)
+    full_path = os.path.expanduser(req.dcp_path)
+
+    if agent.start_player(full_path, req.audio_dev, req.display_dev):
         return {"result": "ok", "status": "PLAYING"}
     else:
         raise HTTPException(status_code=500, detail="Failed to start player")
 
 @app.post("/playlist/start")
 def start_playlist(req: PlaylistRequest):
-    if agent.start_playlist(req.dcps, req.audio_dev, req.display_dev):
+    # Expand paths for all items in playlist
+    full_paths = [os.path.expanduser(p) for p in req.dcps]
+    
+    if agent.start_playlist(full_paths, req.audio_dev, req.display_dev):
         return {"result": "ok", "status": "PLAYLIST_STARTED"}
     else:
         raise HTTPException(status_code=500, detail="Failed to start playlist")
@@ -242,10 +298,14 @@ def resume_player():
     else:
         raise HTTPException(status_code=500, detail="Failed to resume player")
 
+from typing import Union, Optional
+
+# ... (imports)
+
 class HardwareRequest(BaseModel):
     component: str
     action: str
-    value: float | bool | None = None
+    value: Union[float, bool, None] = None
 
 @app.post("/hardware")
 def control_hardware(req: HardwareRequest):

@@ -6,7 +6,7 @@ const API_BASE = "http://localhost:8088";
 function Dashboard() {
     const { t, i18n } = useTranslation();
     const fileInputRef = useRef(null);
-    
+
     const [status, setStatus] = useState({
         status: "IDLE",
         current_dcp: null,
@@ -41,7 +41,7 @@ function Dashboard() {
         await fetch(`${API_BASE}/play`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 dcp_path: dcpPath,
                 audio_dev: audioDevice,
                 display_dev: displayDevice
@@ -95,7 +95,7 @@ function Dashboard() {
             // webkitRelativePath 包含相对路径，我们需要提取目录路径
             const path = file.webkitRelativePath || file.name;
             const folderPath = path.substring(0, path.lastIndexOf('/'));
-            
+
             if (folderPath) {
                 setDcpPath(folderPath);
             }
@@ -127,6 +127,42 @@ function Dashboard() {
         ? (status.progress.current / status.progress.total) * 100
         : 0;
 
+    const formatPath = (p) => {
+        if (!p) return "";
+        return p.replace("/Users/zhangxin", "~").replace("/home/zhangxin", "~");
+    };
+
+    const LedStatBar = ({ label, value, unit = "%" }) => {
+        const totalLeds = 20;
+        const activeLeds = Math.floor(Math.min(100, Math.max(0, value)) / 100 * totalLeds);
+
+        const getLedColor = (index) => {
+            if (index < 12) return "#4CAF50"; // Green (0-60%)
+            if (index < 16) return "#FFC107"; // Yellow (60-80%)
+            return "#f44336"; // Red (80-100%)
+        };
+
+        return (
+            <div style={{ marginBottom: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "12px" }}>
+                    <span style={{ color: "#aaa" }}>{label}</span>
+                    <span style={{ color: getLedColor(activeLeds - 1), fontWeight: "bold" }}>{value}{unit}</span>
+                </div>
+                <div style={{ display: "flex", gap: "2px", height: "8px" }}>
+                    {[...Array(totalLeds)].map((_, i) => (
+                        <div key={i} style={{
+                            flex: 1,
+                            backgroundColor: i < activeLeds ? getLedColor(i) : "#333",
+                            borderRadius: "1px",
+                            boxShadow: i < activeLeds ? `0 0 4px ${getLedColor(i)}` : "none",
+                            transition: "background-color 0.1s"
+                        }}></div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div style={{
             padding: "20px",
@@ -149,7 +185,7 @@ function Dashboard() {
                     <p style={{ margin: "5px 0 0", color: "#666", fontSize: "12px", textTransform: "uppercase" }}>{t('subtitle')}</p>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                    <button 
+                    <button
                         onClick={toggleLanguage}
                         style={{
                             padding: "8px 16px",
@@ -199,22 +235,23 @@ function Dashboard() {
                     <div style={{ padding: "20px", backgroundColor: "#1e1e1e", borderRadius: "8px", border: "1px solid #333", flex: 1 }}>
                         <h3 style={{ marginTop: 0, fontSize: "14px", color: "#888", textTransform: "uppercase" }}>{t('systemInfo')}</h3>
                         <div style={{ marginTop: "15px", fontSize: "13px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                                <span>{t('cpuLoad')}</span>
-                                <span style={{ color: "#4CAF50" }}>12%</span>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                                <span>{t('gpuLoad')}</span>
-                                <span style={{ color: "#4CAF50" }}>45%</span>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                                <span>{t('diskUsage')}</span>
-                                <span style={{ color: "#FFC107" }}>78%</span>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                                <span>{t('temp')}</span>
-                                <span style={{ color: "#4CAF50" }}>42°C</span>
-                            </div>
+                            <LedStatBar
+                                label={t('cpuLoad')}
+                                value={status.system?.cpu || 0}
+                            />
+                            <LedStatBar
+                                label={t('gpuLoad')}
+                                value={status.system?.gpu || 0}
+                            />
+                            <LedStatBar
+                                label={t('diskUsage')}
+                                value={status.system?.disk || 0}
+                            />
+                            <LedStatBar
+                                label={t('temp')}
+                                value={status.system?.temp || 0}
+                                unit="°C"
+                            />
                         </div>
                         <div style={{ marginTop: "20px", fontSize: "12px", color: "#666", borderTop: "1px solid #333", paddingTop: "10px" }}>
                             {t('videoOutput')}: <span style={{ color: "#4CAF50" }}>{t('active')}</span>
@@ -270,7 +307,7 @@ function Dashboard() {
                             <div style={{ display: "flex", gap: "10px" }}>
                                 <input
                                     type="text"
-                                    value={dcpPath}
+                                    value={formatPath(dcpPath)}
                                     onChange={(e) => setDcpPath(e.target.value)}
                                     style={{
                                         flex: 1, padding: "10px", backgroundColor: "#121212", border: "1px solid #333", borderRadius: "4px", color: "#ddd"

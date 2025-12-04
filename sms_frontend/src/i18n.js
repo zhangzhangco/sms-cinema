@@ -122,8 +122,8 @@ const resources = {
             "closed": "关闭",
             "macro1": "宏 1 (2D)",
             "macro2": "宏 2 (3D)",
-            "macro3": "宏 3 (平面)",
-            "macro4": "宏 4 (变形)",
+            "macro3": "宏 3 (遮幅)",
+            "macro4": "宏 4 (宽银幕)",
 
             // Sound
             "soundProcessor": "音频处理器",
